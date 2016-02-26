@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+
+CONTAINER_ID=$1
+
+mysql_command="mysql"
+mysql_sql_cache=()
+
+_docker_mysql_run() {
+	IFS=" "
+	COMMAND="'$*'"
+	docker exec -it $CONTAINER_ID $COMMAND
+}
+
+_mysql_open() {
+	_docker_mysql_run "$mysql_command"
+}
+
+_mysql_run() {
+	COMMAND=$1
+	echo "$COMMAND" | _mysql_open
+}
+
+_mysql_setup() {
+	USER=$1; PW=$2; DB=$3
+
+	mysql_command="mysql -u $USER --password=$ADMIN_PW $DB"
+}
+
+_mysql() {
+	mysql_sql_cache+=("$1")
+}
+
+_mysql_flush() {
+	IFS=$'\n'
+	_mysql_run "${mysql_sql_cache[*]}"
+	mysql_sql_cache=()
+}
+
+
+case "$2" in
+	create)
+		DB=$3; DB_PW=$4; ADMIN_PW=$5
+
+		_mysql_setup root $ADMIN_PW mysql
+		_mysql "CREATE USER '$DB'@'%' IDENTIFIED BY 'temporary_password';"
+		_mysql "SET PASSWORD FOR '$DB'@'%' = PASSWORD('$DB_PW');"
+		_mysql "CREATE DATABASE $DB;"
+		_mysql "GRANT ALL PRIVILEGES ON $DB.* To '$DB'@'%';"
+		_mysql_flush
+		;;
+
+	delete)
+		DB=$3; ADMIN_PW=$4
+
+		_mysql_setup root $ADMIN_PW mysql
+		_mysql "DROP USER '$DB'@'%';"
+		_mysql "DROP DATABASE $DB;"
+		_mysql_flush
+		;;
+
+	user_connect)
+		DB=$3; DB_PW=$4
+
+		_mysql_setup $DB $DB_PW $DB
+		_mysql_open
+		;;
+
+	connect)
+		DB=$3; ADMIN_PW=$3
+
+		_mysql_setup root $ADMIN_PW $DB
+		_mysql_open
+		;;
+
+	status)
+		ADMIN_PW=$3
+
+		_docker_mysql_run mysqladmin -u root --password=$ADMIN_PW status
+		;;
+
+	shutdown)
+		ADMIN_PW=$3
+
+		_docker_mysql_run mysqladmin -u root --password=$ADMIN_PW shutdown
+		;;
+
+	list)
+		ADMIN_PW=$3
+
+		_mysql_setup root $ADMIN_PW mysql
+		_mysql "SHOW DATABASES;"
+		_mysql_flush
+		;;
+
+	dump)
+		DB=$3; ADMIN_PW=$4
+
+		_docker_mysql_run mysqldump -u root --password=$ADMIN_PW $DB
+		;;
+esac
