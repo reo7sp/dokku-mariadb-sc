@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -eo pipefail; [[ $DOKKU_TRACE ]] && set -x
+source "$(dirname "$0")/config"
+
+database_name() {
+  echo "$1" | cut -c 1-16 | tr .- _
+}
