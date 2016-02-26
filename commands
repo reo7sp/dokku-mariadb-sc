@@ -23,14 +23,13 @@ case "$1" in
 		[[ ! -d "$PLUGIN_DATA_ROOT/$2" ]] || dokku_log_fail "$PLUGIN_SERVICE database $NAME already exists"
 		DBINFO_ROOT="$PLUGIN_DATA_ROOT/$NAME"
 
-		new_password=$(openssl rand -base64 32|base64)
-		database=$(database_name "$NAME")
-		echo $database > "$DBINFO_ROOT/db"
-		echo $new_password > "$DBINFO_ROOT/pass"
-		touch "$DBINFO_ROOT/links"
+		DB_NAME=$(generate_database_name "$NAME")
+		NEW_PW=$(generate_random_string 8)
+		echo $DB_NAME > "$DBINFO_ROOT/DB_NAME"
+		echo $NEW_PW > "$DBINFO_ROOT/PASSWORD"
+		touch "$DBINFO_ROOT/LINKS"
 		chmod 600 "$DBINFO_ROOT/*"
-
-		# TODO
+		manage $(get_container_id) create $DB_NAME $NEW_PW $(get_admin_password)
 
 		dokku_log_info2 "$PLUGIN_SERVICE database created: $NAME"
 		;;
@@ -42,8 +41,25 @@ case "$1" in
 		[[ -d "$PLUGIN_DATA_ROOT/$2" ]] || dokku_log_fail "$PLUGIN_SERVICE database $NAME doesn't exist"
 		DBINFO_ROOT="$PLUGIN_DATA_ROOT/$NAME"
 
-		# TODO
+		[[ "$3" == "force" ]] && DOKKU_APPS_FORCE_DELETE=1
+		if [[ -z "$DOKKU_APPS_FORCE_DELETE" ]]; then
+			dokku_log_warn "WARNING: Potentially Destructive Action"
+			dokku_log_warn "This command will destroy $PLUGIN_SERVICE $NAME database."
+			dokku_log_warn "To proceed, type \"$NAME\""
+			echo ""
 
+			read -p "> " name
+			if [[ "$name" != "$NAME" ]]; then
+				dokku_log_warn "Confirmation did not match $NAME. Aborted."
+				exit 1
+			fi
+		fi
+
+		DB_NAME=$(cat "$DBINFO_ROOT/DB_NAME")
+		manage $(get_container_id) destroy $DB_NAME $(get_admin_password)
+		rm -rf "$DBINFO_ROOT"
+
+		dokku_log_info2 "$PLUGIN_SERVICE database deleted: $NAME"
 		;;
 
 	$PLUGIN_COMMAND_PREFIX:link)
@@ -55,8 +71,22 @@ case "$1" in
 		[[ -d "$PLUGIN_DATA_ROOT/$2" ]] || dokku_log_fail "$PLUGIN_SERVICE database $NAME doesn't exist"
 		DBINFO_ROOT="$PLUGIN_DATA_ROOT/$NAME"
 
-		# TODO
+		DB_NAME=$(cat "$DBINFO_ROOT/DB_NAME")
+		PW=$(cat "$DBINFO_ROOT/PASSWORD")
+		DB_URL=$(get_database_url $DB_NAME $PW)
 
+		LINK=$(echo "$(dokku config "$APP")" | grep "$DB_URL" | cut -d: -f1) || true
+		[[ -n $LINK ]] && dokku_log_fail "Already linked as $LINK"
+
+		echo "$APP" >> "$DBINFO_ROOT/LINKS"
+		dokku docker-options:add "$APP" build,deploy,run "--link $(get_container_id):$PLUGIN_DATABASE_ALIAS"
+		dokku config:set "$APP" "DATABASE_URL=$DB_URL"
+		dokku config:set "$APP" "DB_HOST=$PLUGIN_DATABASE_ALIAS"
+		dokku config:set "$APP" "DB_PORT=$PLUGIN_DATABASE_PORT"
+		dokku config:set "$APP" "DB_USER=$DB_NAME"
+		dokku config:set "$APP" "DB_PASS=$PW"
+
+		dokku_log_info2 "$APP linked to $PLUGIN_SERVICE database: $NAME"
 		;;
 
 	$PLUGIN_COMMAND_PREFIX:unlink)
@@ -68,8 +98,22 @@ case "$1" in
 		[[ -d "$PLUGIN_DATA_ROOT/$2" ]] || dokku_log_fail "$PLUGIN_SERVICE database $NAME doesn't exist"
 		DBINFO_ROOT="$PLUGIN_DATA_ROOT/$NAME"
 
-		# TODO
+		DB_NAME=$(cat "$DBINFO_ROOT/DB_NAME")
+		PW=$(cat "$DBINFO_ROOT/PASSWORD")
+		DB_URL=$(get_database_url $DB_NAME $PW)
 
+		LINK=$(echo "$(dokku config "$APP")" | grep "$DB_URL" | cut -d: -f1) || true
+		[[ -z ${LINK[*]} ]] && dokku_log_fail "Not linked to app $APP"
+
+		sed -i "/^$APP\$/d" "$DBINFO_ROOT/LINKS"
+		dokku docker-options:remove "$APP" build,deploy,run "--link $(get_container_id):$PLUGIN_DATABASE_ALIAS"
+		dokku config:unset "$APP" "DATABASE_URL"
+		dokku config:unset "$APP" "DB_HOST"
+		dokku config:unset "$APP" "DB_PORT"
+		dokku config:unset "$APP" "DB_USER"
+		dokku config:unset "$APP" "DB_PASS"
+
+		dokku_log_info2 "$APP unlinked from $PLUGIN_SERVICE database: $NAME"
 		;;
 
 	$PLUGIN_COMMAND_PREFIX:export)
@@ -79,8 +123,8 @@ case "$1" in
 		[[ -d "$PLUGIN_DATA_ROOT/$2" ]] || dokku_log_fail "$PLUGIN_SERVICE database $NAME doesn't exist"
 		DBINFO_ROOT="$PLUGIN_DATA_ROOT/$NAME"
 
-		# TODO
-
+		DB_NAME=$(cat "$DBINFO_ROOT/DB_NAME")
+		manage $(get_container_id) dump $DB_NAME $(get_admin_password)
 		;;
 
 	$PLUGIN_COMMAND_PREFIX:import)
@@ -90,14 +134,42 @@ case "$1" in
 		[[ -d "$PLUGIN_DATA_ROOT/$2" ]] || dokku_log_fail "$PLUGIN_SERVICE database $NAME doesn't exist"
 		DBINFO_ROOT="$PLUGIN_DATA_ROOT/$NAME"
 
-		# TODO
-
+		DB_NAME=$(cat "$DBINFO_ROOT/DB_NAME")
+		manage $(get_container_id) connect $DB_NAME $(get_admin_password)
 		;;
 
 	$PLUGIN_COMMAND_PREFIX:list)
+		[[ -z $2 ]] && dokku_log_fail "Please specify a name for the database"
+		NAME="$2"
+
+		[[ -d "$PLUGIN_DATA_ROOT/$2" ]] || dokku_log_fail "$PLUGIN_SERVICE database $NAME doesn't exist"
+		DBINFO_ROOT="$PLUGIN_DATA_ROOT/$NAME"
+
+		DB_NAME=$(cat "$DBINFO_ROOT/DB_NAME")
+		manage $(get_container_id) connect $DB_NAME $(get_admin_password)
 		;;
 
 	$PLUGIN_COMMAND_PREFIX:connect)
+		[[ -z $2 ]] && dokku_log_fail "Please specify a name for the database"
+		NAME="$2"
+
+		[[ -d "$PLUGIN_DATA_ROOT/$2" ]] || dokku_log_fail "$PLUGIN_SERVICE database $NAME doesn't exist"
+		DBINFO_ROOT="$PLUGIN_DATA_ROOT/$NAME"
+
+		DB_NAME=$(cat "$DBINFO_ROOT/DB_NAME")
+		manage $(get_container_id) connect $DB_NAME $(get_admin_password)
+		;;
+
+	$PLUGIN_COMMAND_PREFIX:user_connect)
+		[[ -z $2 ]] && dokku_log_fail "Please specify a name for the database"
+		NAME="$2"
+
+		[[ -d "$PLUGIN_DATA_ROOT/$2" ]] || dokku_log_fail "$PLUGIN_SERVICE database $NAME doesn't exist"
+		DBINFO_ROOT="$PLUGIN_DATA_ROOT/$NAME"
+
+		DB_NAME=$(cat "$DBINFO_ROOT/DB_NAME")
+		PW=$(cat "$DBINFO_ROOT/PASSWORD")
+		manage $(get_container_id) user_connect $DB_NAME $PW
 		;;
 
 	$PLUGIN_COMMAND_PREFIX:logs)
@@ -123,7 +195,7 @@ case "$1" in
 			$PLUGIN_COMMAND_PREFIX:import <name> < <file>, Import a dump into the $PLUGIN_SERVICE database
 			$PLUGIN_COMMAND_PREFIX:list, List all $PLUGIN_SERVICE databases
 			$PLUGIN_COMMAND_PREFIX:connect, Connect to $PLUGIN_SERVICE
-			$PLUGIN_COMMAND_PREFIX:logs [-t], Print the most recent log(s) for $PLUGIN_SERVICE container
+			$PLUGIN_COMMAND_PREFIX:logs, Print the most recent log(s) for $PLUGIN_SERVICE container
 			$PLUGIN_COMMAND_PREFIX:start, Start a $PLUGIN_SERVICE container
 			$PLUGIN_COMMAND_PREFIX:stop, Stop a running $PLUGIN_SERVICE container
 			$PLUGIN_COMMAND_PREFIX:restart, Graceful shutdown and restart of the $PLUGIN_SERVICE container

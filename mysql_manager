@@ -7,7 +7,7 @@ mysql_sql_cache=()
 
 _docker_mysql_run() {
 	IFS=" "
-	COMMAND="'$*'"
+	local COMMAND="'$*'"
 	docker exec -it $CONTAINER_ID $COMMAND
 }
 
@@ -16,12 +16,12 @@ _mysql_open() {
 }
 
 _mysql_run() {
-	COMMAND=$1
+	local COMMAND=$1
 	echo "$COMMAND" | _mysql_open
 }
 
 _mysql_setup() {
-	USER=$1; PW=$2; DB=$3
+	local USER=$1; local PW=$2; local DB=$3
 
 	mysql_command="mysql -u $USER --password=$ADMIN_PW $DB"
 }

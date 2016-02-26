@@ -2,6 +2,32 @@
 set -eo pipefail; [[ $DOKKU_TRACE ]] && set -x
 source "$(dirname "$0")/config"
 
-database_name() {
-  echo "$1" | cut -c 1-16 | tr .- _
+
+MANAGER_SCRIPT="$(dirname "$0")/mysql_manager"
+
+manage() {
+	bash $MANAGER_SCRIPT $*
+}
+
+get_container_id() {
+	# TODO
+}
+
+get_admin_password() {
+	# TODO
+}
+
+generate_database_name() {
+	echo "$1" | cut -c 1-16 | tr .- _
+}
+
+generate_random_string() {
+	local LENGTH=$1
+	openssl rand -hex $LENGTH
+}
+
+get_database_url() {
+	local DB=$1
+	local PW=$2
+	echo "$PLUGIN_SCHEME://$DB:$PW@$PLUGIN_DATABASE_ALIAS:$PLUGIN_DATABASE_PORT/$DB"
 }
