@@ -9,12 +9,35 @@ manage() {
 	bash $MANAGER_SCRIPT $*
 }
 
+restart_app() {
+	dokku_log_info1_quiet "Restarting application: $APP"
+	dokku release $APP
+	dokku deploy $APP
+}
+
+restart_apps() {
+	dokku_log_info1_quiet "Restarting applications"
+
+	local apps=()
+
+	for dir in $(ls $PLUGIN_DATA_ROOT); do
+		while read line; do
+			apps+=("$line")
+		done < "$PLUGIN_DATA_ROOT/$dir/LINKS"
+	done
+
+	apps=$(echo "${apps[@]}" | tr ' ' '\n' | sort -u | tr '\n' ' ')
+	for item in $apps; do
+		restart_app $item
+	done
+}
+
 get_container_id() {
-	# TODO
+	cat $PLUGIN_DATA_ROOT/CONTAINER_ID
 }
 
 get_admin_password() {
-	# TODO
+	cat $PLUGIN_DATA_ROOT/ROOTPASSWORD
 }
 
 generate_database_name() {

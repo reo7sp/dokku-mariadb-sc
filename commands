@@ -20,8 +20,11 @@ case "$1" in
 		[[ -z $2 ]] && dokku_log_fail "Please specify a name for the database"
 		NAME="$2"
 
-		[[ ! -d "$PLUGIN_DATA_ROOT/$2" ]] || dokku_log_fail "$PLUGIN_SERVICE database $NAME already exists"
 		DBINFO_ROOT="$PLUGIN_DATA_ROOT/$NAME"
+		[[ -d "$DBINFO_ROOT" ]] || dokku_log_fail "$PLUGIN_SERVICE database $NAME doesn't exist"
+
+		CONTAINER_ID=$(get_container_id)
+		[[ ! -n $CONTAINER_ID ]] && dokku_log_fail "No container exists"
 
 		DB_NAME=$(generate_database_name "$NAME")
 		NEW_PW=$(generate_random_string 8)
@@ -29,7 +32,7 @@ case "$1" in
 		echo $NEW_PW > "$DBINFO_ROOT/PASSWORD"
 		touch "$DBINFO_ROOT/LINKS"
 		chmod 600 "$DBINFO_ROOT/*"
-		manage $(get_container_id) create $DB_NAME $NEW_PW $(get_admin_password)
+		manage $CONTAINER_ID create $DB_NAME $NEW_PW $(get_admin_password)
 
 		dokku_log_info2 "$PLUGIN_SERVICE database created: $NAME"
 		;;
@@ -38,8 +41,11 @@ case "$1" in
 		[[ -z $2 ]] && dokku_log_fail "Please specify a name for the database"
 		NAME="$2"
 
-		[[ -d "$PLUGIN_DATA_ROOT/$2" ]] || dokku_log_fail "$PLUGIN_SERVICE database $NAME doesn't exist"
 		DBINFO_ROOT="$PLUGIN_DATA_ROOT/$NAME"
+		[[ -d "$DBINFO_ROOT" ]] || dokku_log_fail "$PLUGIN_SERVICE database $NAME doesn't exist"
+
+		CONTAINER_ID=$(get_container_id)
+		[[ ! -n $CONTAINER_ID ]] && dokku_log_fail "No container exists"
 
 		[[ "$3" == "force" ]] && DOKKU_APPS_FORCE_DELETE=1
 		if [[ -z "$DOKKU_APPS_FORCE_DELETE" ]]; then
@@ -56,7 +62,7 @@ case "$1" in
 		fi
 
 		DB_NAME=$(cat "$DBINFO_ROOT/DB_NAME")
-		manage $(get_container_id) destroy $DB_NAME $(get_admin_password)
+		manage $CONTAINER_ID destroy $DB_NAME $(get_admin_password)
 		rm -rf "$DBINFO_ROOT"
 
 		dokku_log_info2 "$PLUGIN_SERVICE database deleted: $NAME"
@@ -68,8 +74,11 @@ case "$1" in
 		NAME="$2"
 		APP="$3"
 
-		[[ -d "$PLUGIN_DATA_ROOT/$2" ]] || dokku_log_fail "$PLUGIN_SERVICE database $NAME doesn't exist"
 		DBINFO_ROOT="$PLUGIN_DATA_ROOT/$NAME"
+		[[ -d "$DBINFO_ROOT" ]] || dokku_log_fail "$PLUGIN_SERVICE database $NAME doesn't exist"
+
+		CONTAINER_ID=$(get_container_id)
+		[[ ! -n $CONTAINER_ID ]] && dokku_log_fail "No container exists"
 
 		DB_NAME=$(cat "$DBINFO_ROOT/DB_NAME")
 		PW=$(cat "$DBINFO_ROOT/PASSWORD")
@@ -79,7 +88,7 @@ case "$1" in
 		[[ -n $LINK ]] && dokku_log_fail "Already linked as $LINK"
 
 		echo "$APP" >> "$DBINFO_ROOT/LINKS"
-		dokku docker-options:add "$APP" build,deploy,run "--link $(get_container_id):$PLUGIN_DATABASE_ALIAS"
+		dokku docker-options:add "$APP" build,deploy,run "--link $CONTAINER_ID:$PLUGIN_DATABASE_ALIAS"
 		dokku config:set "$APP" "DATABASE_URL=$DB_URL"
 		dokku config:set "$APP" "DB_HOST=$PLUGIN_DATABASE_ALIAS"
 		dokku config:set "$APP" "DB_PORT=$PLUGIN_DATABASE_PORT"
@@ -95,8 +104,11 @@ case "$1" in
 		NAME="$2"
 		APP="$3"
 
-		[[ -d "$PLUGIN_DATA_ROOT/$2" ]] || dokku_log_fail "$PLUGIN_SERVICE database $NAME doesn't exist"
 		DBINFO_ROOT="$PLUGIN_DATA_ROOT/$NAME"
+		[[ -d "$DBINFO_ROOT" ]] || dokku_log_fail "$PLUGIN_SERVICE database $NAME doesn't exist"
+
+		CONTAINER_ID=$(get_container_id)
+		[[ ! -n $CONTAINER_ID ]] && dokku_log_fail "No container exists"
 
 		DB_NAME=$(cat "$DBINFO_ROOT/DB_NAME")
 		PW=$(cat "$DBINFO_ROOT/PASSWORD")
@@ -106,7 +118,7 @@ case "$1" in
 		[[ -z ${LINK[*]} ]] && dokku_log_fail "Not linked to app $APP"
 
 		sed -i "/^$APP\$/d" "$DBINFO_ROOT/LINKS"
-		dokku docker-options:remove "$APP" build,deploy,run "--link $(get_container_id):$PLUGIN_DATABASE_ALIAS"
+		dokku docker-options:remove "$APP" build,deploy,run "--link $CONTAINER_ID:$PLUGIN_DATABASE_ALIAS"
 		dokku config:unset "$APP" "DATABASE_URL"
 		dokku config:unset "$APP" "DB_HOST"
 		dokku config:unset "$APP" "DB_PORT"
@@ -120,68 +132,115 @@ case "$1" in
 		[[ -z $2 ]] && dokku_log_fail "Please specify a name for the database"
 		NAME="$2"
 
-		[[ -d "$PLUGIN_DATA_ROOT/$2" ]] || dokku_log_fail "$PLUGIN_SERVICE database $NAME doesn't exist"
 		DBINFO_ROOT="$PLUGIN_DATA_ROOT/$NAME"
+		[[ -d "$DBINFO_ROOT" ]] || dokku_log_fail "$PLUGIN_SERVICE database $NAME doesn't exist"
+
+		CONTAINER_ID=$(get_container_id)
+		[[ ! -n $CONTAINER_ID ]] && dokku_log_fail "No container exists"
 
 		DB_NAME=$(cat "$DBINFO_ROOT/DB_NAME")
-		manage $(get_container_id) dump $DB_NAME $(get_admin_password)
+		manage $CONTAINER_ID dump $DB_NAME $(get_admin_password)
 		;;
 
 	$PLUGIN_COMMAND_PREFIX:import)
 		[[ -z $2 ]] && dokku_log_fail "Please specify a name for the database"
 		NAME="$2"
 
-		[[ -d "$PLUGIN_DATA_ROOT/$2" ]] || dokku_log_fail "$PLUGIN_SERVICE database $NAME doesn't exist"
 		DBINFO_ROOT="$PLUGIN_DATA_ROOT/$NAME"
+		[[ -d "$DBINFO_ROOT" ]] || dokku_log_fail "$PLUGIN_SERVICE database $NAME doesn't exist"
+
+		CONTAINER_ID=$(get_container_id)
+		[[ ! -n $CONTAINER_ID ]] && dokku_log_fail "No container exists"
 
 		DB_NAME=$(cat "$DBINFO_ROOT/DB_NAME")
-		manage $(get_container_id) connect $DB_NAME $(get_admin_password)
+		manage $CONTAINER_ID connect $DB_NAME $(get_admin_password)
 		;;
 
 	$PLUGIN_COMMAND_PREFIX:list)
 		[[ -z $2 ]] && dokku_log_fail "Please specify a name for the database"
 		NAME="$2"
 
-		[[ -d "$PLUGIN_DATA_ROOT/$2" ]] || dokku_log_fail "$PLUGIN_SERVICE database $NAME doesn't exist"
 		DBINFO_ROOT="$PLUGIN_DATA_ROOT/$NAME"
+		[[ -d "$DBINFO_ROOT" ]] || dokku_log_fail "$PLUGIN_SERVICE database $NAME doesn't exist"
+
+		CONTAINER_ID=$(get_container_id)
+		[[ ! -n $CONTAINER_ID ]] && dokku_log_fail "No container exists"
 
 		DB_NAME=$(cat "$DBINFO_ROOT/DB_NAME")
-		manage $(get_container_id) connect $DB_NAME $(get_admin_password)
+		manage $CONTAINER_ID connect $DB_NAME $(get_admin_password)
 		;;
 
 	$PLUGIN_COMMAND_PREFIX:connect)
 		[[ -z $2 ]] && dokku_log_fail "Please specify a name for the database"
 		NAME="$2"
 
-		[[ -d "$PLUGIN_DATA_ROOT/$2" ]] || dokku_log_fail "$PLUGIN_SERVICE database $NAME doesn't exist"
 		DBINFO_ROOT="$PLUGIN_DATA_ROOT/$NAME"
+		[[ -d "$DBINFO_ROOT" ]] || dokku_log_fail "$PLUGIN_SERVICE database $NAME doesn't exist"
+
+		CONTAINER_ID=$(get_container_id)
+		[[ ! -n $CONTAINER_ID ]] && dokku_log_fail "No container exists"
 
 		DB_NAME=$(cat "$DBINFO_ROOT/DB_NAME")
-		manage $(get_container_id) connect $DB_NAME $(get_admin_password)
+		manage $CONTAINER_ID connect $DB_NAME $(get_admin_password)
 		;;
 
 	$PLUGIN_COMMAND_PREFIX:user_connect)
 		[[ -z $2 ]] && dokku_log_fail "Please specify a name for the database"
 		NAME="$2"
 
-		[[ -d "$PLUGIN_DATA_ROOT/$2" ]] || dokku_log_fail "$PLUGIN_SERVICE database $NAME doesn't exist"
 		DBINFO_ROOT="$PLUGIN_DATA_ROOT/$NAME"
+		[[ -d "$DBINFO_ROOT" ]] || dokku_log_fail "$PLUGIN_SERVICE database $NAME doesn't exist"
+
+		CONTAINER_ID=$(get_container_id)
+		[[ ! -n $CONTAINER_ID ]] && dokku_log_fail "No container exists"
 
 		DB_NAME=$(cat "$DBINFO_ROOT/DB_NAME")
 		PW=$(cat "$DBINFO_ROOT/PASSWORD")
-		manage $(get_container_id) user_connect $DB_NAME $PW
+		manage $CONTAINER_ID user_connect $DB_NAME $PW
 		;;
 
 	$PLUGIN_COMMAND_PREFIX:logs)
+		CONTAINER_ID=$(get_container_id)
+		[[ ! -n $CONTAINER_ID ]] && dokku_log_fail "No container exists"
+
+		if [[ $2 == "-t" ]]; then
+			DOKKU_LOGS_ARGS="--follow"
+		else
+			DOKKU_LOGS_ARGS="--tail 100"
+		fi
+
+		docker logs $DOKKU_LOGS_ARGS $CONTAINER_ID
 		;;
 
 	$PLUGIN_COMMAND_PREFIX:start)
+		CONTAINER_ID=$(get_container_id)
+		[[ ! -n $CONTAINER_ID ]] && dokku_log_fail "No container exists"
+		RUNNING_CONTAINER_ID=$(docker ps -f status=running -f id=$CONTAINER_ID -q) || true
+		[[ -n $RUNNING_CONTAINER_ID ]] && dokku_log_fail "Container is already started"
+
+		dokku_log_info1_quiet "Starting container"
+
+		docker start $CONTAINER_ID
+		dokku_log_info2 "Container started"
+
+		restart_apps
 		;;
 
 	$PLUGIN_COMMAND_PREFIX:stop)
+		CONTAINER_ID=$(get_container_id)
+		[[ ! -n $CONTAINER_ID ]] && dokku_log_fail "No container exists"
+
+		dokku_log_info1_quiet "Stopping container"
+
+		manage $CONTAINER_ID shutdown $(get_admin_password)
+		docker stop $CONTAINER_ID
+
+		dokku_log_info2 "Container stopped"
 		;;
 
 	$PLUGIN_COMMAND_PREFIX:restart)
+		dokku $PLUGIN_COMMAND_PREFIX:stop
+		dokku $PLUGIN_COMMAND_PREFIX:start
 		;;
 
 
@@ -195,7 +254,7 @@ case "$1" in
 			$PLUGIN_COMMAND_PREFIX:import <name> < <file>, Import a dump into the $PLUGIN_SERVICE database
 			$PLUGIN_COMMAND_PREFIX:list, List all $PLUGIN_SERVICE databases
 			$PLUGIN_COMMAND_PREFIX:connect, Connect to $PLUGIN_SERVICE
-			$PLUGIN_COMMAND_PREFIX:logs, Print the most recent log(s) for $PLUGIN_SERVICE container
+			$PLUGIN_COMMAND_PREFIX:logs [-t], Print the most recent log(s) for $PLUGIN_SERVICE container
 			$PLUGIN_COMMAND_PREFIX:start, Start a $PLUGIN_SERVICE container
 			$PLUGIN_COMMAND_PREFIX:stop, Stop a running $PLUGIN_SERVICE container
 			$PLUGIN_COMMAND_PREFIX:restart, Graceful shutdown and restart of the $PLUGIN_SERVICE container
