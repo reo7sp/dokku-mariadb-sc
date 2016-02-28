@@ -3,15 +3,15 @@ set -eo pipefail; [[ $DOKKU_TRACE ]] && set -x
 
 PLUGIN_BASE_PATH="$PLUGIN_PATH"
 if [[ -n $DOKKU_API_VERSION ]]; then
-  PLUGIN_BASE_PATH="$PLUGIN_ENABLED_PATH"
+	PLUGIN_BASE_PATH="$PLUGIN_ENABLED_PATH"
 fi
 source "$(dirname "$0")/functions"
 source "$(dirname "$0")/config"
 
 if [[ $1 == $PLUGIN_COMMAND_PREFIX:* ]]; then
-  if [[ ! -d $PLUGIN_DATA_ROOT ]]; then
-    dokku_log_fail "$PLUGIN_SERVICE: Please run: sudo dokku plugin:install"
-  fi
+	if [[ ! -d $PLUGIN_DATA_ROOT ]]; then
+		dokku_log_fail "$PLUGIN_SERVICE: Please run: sudo dokku plugin:install"
+	fi
 fi
 
 
@@ -243,6 +243,25 @@ case "$1" in
 		dokku $PLUGIN_COMMAND_PREFIX:start
 		;;
 
+	$PLUGIN_COMMAND_PREFIX:install)
+		if ! docker images | grep -e "^$PLUGIN_IMAGE " | grep -q "$PLUGIN_IMAGE_VERSION"; then
+			dokku_log_info1_quiet "Downloading container image"
+			docker pull "$PLUGIN_IMAGE:$PLUGIN_IMAGE_VERSION"
+		fi
+
+		dokku_log_info1_quiet "Creating container"
+
+		mkdir -p "$PLUGIN_DATA_ROOT/data" || echo "Failed to create $PLUGIN_SERVICE directory"
+		chown dokku:dokku "$PLUGIN_DATA_ROOT"
+
+		ROOT_PW=$(generate_random_string 8)
+		ID=$(docker run --name "$PLUGIN_SERVICE" -v "$SERVICE_DATA_ROOT/data:/var/lib/mysql" -e "MYSQL_ROOT_PASSWORD=$ROOT_PW" -d --restart always --label dokku=service --label dokku.service=mariadb "$PLUGIN_IMAGE:$PLUGIN_IMAGE_VERSION")
+		echo "$ID" > "$PLUGIN_DATA_ROOT/CONTAINER_ID"
+		echo "$ROOT_PW" > "$PLUGIN_DATA_ROOT/ROOT_PASSWORD"
+
+		dokku_log_info2 "Container was created"
+		;;
+
 
 	help | $PLUGIN_COMMAND_PREFIX:help)
 		HELP=$(cat<<EOF
@@ -258,7 +277,9 @@ case "$1" in
 			$PLUGIN_COMMAND_PREFIX:start, Start a $PLUGIN_SERVICE container
 			$PLUGIN_COMMAND_PREFIX:stop, Stop a running $PLUGIN_SERVICE container
 			$PLUGIN_COMMAND_PREFIX:restart, Graceful shutdown and restart of the $PLUGIN_SERVICE container
-		EOF)
+			$PLUGIN_COMMAND_PREFIX:install, Create $PLUGIN_SERVICE container
+		EOF
+		)
 
 		if [[ -n $DOKKU_API_VERSION ]]; then
 			echo "$HELP"

@@ -37,7 +37,7 @@ get_container_id() {
 }
 
 get_admin_password() {
-	cat $PLUGIN_DATA_ROOT/ROOTPASSWORD
+	cat $PLUGIN_DATA_ROOT/ROOT_PASSWORD
 }
 
 generate_database_name() {

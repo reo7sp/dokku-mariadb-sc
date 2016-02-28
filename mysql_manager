@@ -5,14 +5,14 @@ CONTAINER_ID=$1
 mysql_command="mysql"
 mysql_sql_cache=()
 
-_docker_mysql_run() {
+_docker_exec() {
 	IFS=" "
-	local COMMAND="'$*'"
+	local COMMAND="$*"
 	docker exec -it $CONTAINER_ID $COMMAND
 }
 
 _mysql_open() {
-	_docker_mysql_run "$mysql_command"
+	_docker_exec "$mysql_command"
 }
 
 _mysql_run() {
@@ -22,8 +22,7 @@ _mysql_run() {
 
 _mysql_setup() {
 	local USER=$1; local PW=$2; local DB=$3
-
-	mysql_command="mysql -u $USER --password=$ADMIN_PW $DB"
+	mysql_command="mysql -u $USER --password=$PW $DB"
 }
 
 _mysql() {
@@ -75,13 +74,13 @@ case "$2" in
 	status)
 		ADMIN_PW=$3
 
-		_docker_mysql_run mysqladmin -u root --password=$ADMIN_PW status
+		_docker_exec mysqladmin -u root --password=$ADMIN_PW status
 		;;
 
 	shutdown)
 		ADMIN_PW=$3
 
-		_docker_mysql_run mysqladmin -u root --password=$ADMIN_PW shutdown
+		_docker_exec mysqladmin -u root --password=$ADMIN_PW shutdown
 		;;
 
 	list)
@@ -95,6 +94,6 @@ case "$2" in
 	dump)
 		DB=$3; ADMIN_PW=$4
 
-		_docker_mysql_run mysqldump -u root --password=$ADMIN_PW $DB
+		_docker_exec mysqldump -u root --password=$ADMIN_PW $DB
 		;;
 esac

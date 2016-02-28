@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -eo pipefail; [[ $DOKKU_TRACE ]] && set -x
+
+source "$(dirname "$0")/functions"
+source "$(dirname "$0")/config"
+
+APP="$1"
+for dbinfo_root in "$PLUGIN_DATA_ROOT"/*; do
+	sed -i "/^$APP\$/d" "$dbinfo_root/LINKS"
+done
