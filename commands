@@ -246,7 +246,7 @@ case "$1" in
 
 		dokku_log_info1_quiet "Creating container"
 
-		mkdir -p "$PLUGIN_DATA_ROOT/data" || echo "Failed to create $PLUGIN_SERVICE directory"
+		mkdir -p "$PLUGIN_DATA_ROOT/data"
 		chown dokku:dokku "$PLUGIN_DATA_ROOT"
 
 		ROOT_PW=$(generate_random_string 8)
@@ -255,6 +255,25 @@ case "$1" in
 		echo "$ROOT_PW" > "$PLUGIN_DATA_ROOT/ROOT_PASSWORD"
 
 		dokku_log_info2 "Container was created"
+		;;
+
+	$PLUGIN_COMMAND_PREFIX:uninstall)
+		CONTAINER_ID=$(get_container_id)
+		[[ ! -n $CONTAINER_ID ]] && dokku_log_fail "No container exists"
+
+		dokku $PLUGIN_COMMAND_PREFIX:stop
+
+		dokku_log_info1_quiet "Deleting container"
+
+		docker rm --force $CONTAINER_ID
+		rm $PLUGIN_DATA_ROOT/CONTAINER_ID
+
+		dokku_log_info2 "Container was deleted. It's data is kept in $SERVICE_DATA_ROOT/data"
+		;;
+
+	$PLUGIN_COMMAND_PREFIX:reinstall)
+		dokku $PLUGIN_COMMAND_PREFIX:uninstall
+		dokku $PLUGIN_COMMAND_PREFIX:install
 		;;
 
 
@@ -271,8 +290,10 @@ case "$1" in
     $PLUGIN_COMMAND_PREFIX:logs [-t], Print the most recent log(s) for $PLUGIN_SERVICE container
     $PLUGIN_COMMAND_PREFIX:start, Start a $PLUGIN_SERVICE container
     $PLUGIN_COMMAND_PREFIX:stop, Stop a running $PLUGIN_SERVICE container
-    $PLUGIN_COMMAND_PREFIX:restart, Graceful shutdown and restart of the $PLUGIN_SERVICE container
+    $PLUGIN_COMMAND_PREFIX:restart, Shutdown and restart the $PLUGIN_SERVICE container
     $PLUGIN_COMMAND_PREFIX:install, Create $PLUGIN_SERVICE container
+    $PLUGIN_COMMAND_PREFIX:uninstall, Delete $PLUGIN_SERVICE container
+    $PLUGIN_COMMAND_PREFIX:reinstall, Delete and recreate the $PLUGIN_SERVICE container
 EOF
 		)
 
