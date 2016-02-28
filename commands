@@ -26,7 +26,7 @@ case "$1" in
 		echo $DB_NAME > "$DBINFO_ROOT/DB_NAME"
 		echo $NEW_PW > "$DBINFO_ROOT/PASSWORD"
 		touch "$DBINFO_ROOT/LINKS"
-		chmod 600 "$DBINFO_ROOT/*"
+		chmod 600 "$DBINFO_ROOT/{DB_NAME,PASSWORD,LINKS}"
 		manage $CONTAINER_ID create $DB_NAME $NEW_PW $(get_admin_password)
 
 		dokku_log_info2 "$PLUGIN_SERVICE database created: $NAME"
