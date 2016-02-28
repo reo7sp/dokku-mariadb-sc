@@ -5,6 +5,7 @@ PLUGIN_BASE_PATH="$PLUGIN_PATH"
 if [[ -n $DOKKU_API_VERSION ]]; then
 	PLUGIN_BASE_PATH="$PLUGIN_ENABLED_PATH"
 fi
+source "$PLUGIN_BASE_PATH/common/functions"
 source "$(dirname "$0")/functions"
 source "$(dirname "$0")/config"
 
