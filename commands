@@ -9,12 +9,6 @@ source "$PLUGIN_BASE_PATH/common/functions"
 source "$(dirname "$0")/functions"
 source "$(dirname "$0")/config"
 
-if [[ $1 == $PLUGIN_COMMAND_PREFIX:* ]]; then
-	if [[ ! -d $PLUGIN_DATA_ROOT ]]; then
-		dokku_log_fail "$PLUGIN_SERVICE: Please run: sudo dokku plugin:install"
-	fi
-fi
-
 
 case "$1" in
 	$PLUGIN_COMMAND_PREFIX:create)
