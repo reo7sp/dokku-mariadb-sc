@@ -265,20 +265,20 @@ case "$1" in
 
 	help | $PLUGIN_COMMAND_PREFIX:help)
 		HELP=$(cat<<EOF
-			$PLUGIN_COMMAND_PREFIX:create <name>, Create a $PLUGIN_SERVICE database
-			$PLUGIN_COMMAND_PREFIX:destroy <name>, Delete the $PLUGIN_SERVICE database
-			$PLUGIN_COMMAND_PREFIX:link <name> <app>, Link the $PLUGIN_SERVICE database to the app
-			$PLUGIN_COMMAND_PREFIX:unlink <name> <app>, Unlink the $PLUGIN_SERVICE database from the app
-			$PLUGIN_COMMAND_PREFIX:export <name>, Export a dump of the $PLUGIN_SERVICE database
-			$PLUGIN_COMMAND_PREFIX:import <name> < <file>, Import a dump into the $PLUGIN_SERVICE database
-			$PLUGIN_COMMAND_PREFIX:list, List all $PLUGIN_SERVICE databases
-			$PLUGIN_COMMAND_PREFIX:connect, Connect to $PLUGIN_SERVICE
-			$PLUGIN_COMMAND_PREFIX:logs [-t], Print the most recent log(s) for $PLUGIN_SERVICE container
-			$PLUGIN_COMMAND_PREFIX:start, Start a $PLUGIN_SERVICE container
-			$PLUGIN_COMMAND_PREFIX:stop, Stop a running $PLUGIN_SERVICE container
-			$PLUGIN_COMMAND_PREFIX:restart, Graceful shutdown and restart of the $PLUGIN_SERVICE container
-			$PLUGIN_COMMAND_PREFIX:install, Create $PLUGIN_SERVICE container
-		EOF
+	$PLUGIN_COMMAND_PREFIX:create <name>, Create a $PLUGIN_SERVICE database
+	$PLUGIN_COMMAND_PREFIX:destroy <name>, Delete the $PLUGIN_SERVICE database
+	$PLUGIN_COMMAND_PREFIX:link <name> <app>, Link the $PLUGIN_SERVICE database to the app
+	$PLUGIN_COMMAND_PREFIX:unlink <name> <app>, Unlink the $PLUGIN_SERVICE database from the app
+	$PLUGIN_COMMAND_PREFIX:export <name>, Export a dump of the $PLUGIN_SERVICE database
+	$PLUGIN_COMMAND_PREFIX:import <name> < <file>, Import a dump into the $PLUGIN_SERVICE database
+	$PLUGIN_COMMAND_PREFIX:list, List all $PLUGIN_SERVICE databases
+	$PLUGIN_COMMAND_PREFIX:connect, Connect to $PLUGIN_SERVICE
+	$PLUGIN_COMMAND_PREFIX:logs [-t], Print the most recent log(s) for $PLUGIN_SERVICE container
+	$PLUGIN_COMMAND_PREFIX:start, Start a $PLUGIN_SERVICE container
+	$PLUGIN_COMMAND_PREFIX:stop, Stop a running $PLUGIN_SERVICE container
+	$PLUGIN_COMMAND_PREFIX:restart, Graceful shutdown and restart of the $PLUGIN_SERVICE container
+	$PLUGIN_COMMAND_PREFIX:install, Create $PLUGIN_SERVICE container
+EOF
 		)
 
 		if [[ -n $DOKKU_API_VERSION ]]; then
