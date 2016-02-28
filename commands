@@ -15,11 +15,11 @@ case "$1" in
 		[[ -z $2 ]] && dokku_log_fail "Please specify a name for the database"
 		NAME="$2"
 
-		DBINFO_ROOT="$PLUGIN_DATA_ROOT/$NAME"
-		[[ -d "$DBINFO_ROOT" ]] || dokku_log_fail "$PLUGIN_SERVICE database $NAME doesn't exist"
-
 		CONTAINER_ID=$(get_container_id)
 		[[ ! -n $CONTAINER_ID ]] && dokku_log_fail "No container exists"
+		
+		DBINFO_ROOT="$PLUGIN_DATA_ROOT/$NAME"
+		mkdir -p "$DBINFO_ROOT"
 
 		DB_NAME=$(generate_database_name "$NAME")
 		NEW_PW=$(generate_random_string 8)
