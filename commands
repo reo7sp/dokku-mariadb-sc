@@ -26,7 +26,9 @@ case "$1" in
 		echo $DB_NAME > "$DBINFO_ROOT/DB_NAME"
 		echo $NEW_PW > "$DBINFO_ROOT/PASSWORD"
 		touch "$DBINFO_ROOT/LINKS"
-		chmod 600 "$DBINFO_ROOT/{DB_NAME,PASSWORD,LINKS}"
+		chmod 600 "$DBINFO_ROOT/DB_NAME"
+		chmod 600 "$DBINFO_ROOT/PASSWORD"
+		chmod 600 "$DBINFO_ROOT/LINKS"
 		manage $CONTAINER_ID create $DB_NAME $NEW_PW $(get_admin_password)
 
 		dokku_log_info2 "$PLUGIN_SERVICE database created: $NAME"
@@ -250,9 +252,11 @@ case "$1" in
 		chown dokku:dokku "$PLUGIN_DATA_ROOT"
 
 		ROOT_PW=$(generate_random_string 8)
-		ID=$(docker run --name "$PLUGIN_NAME" -v "$SERVICE_DATA_ROOT/data:/var/lib/mysql" -e "MYSQL_ROOT_PASSWORD=$ROOT_PW" -d --restart always --label dokku=service --label dokku.service=$PLUGIN_NAME "$PLUGIN_IMAGE:$PLUGIN_IMAGE_VERSION")
+		ID=$(docker run --name "$PLUGIN_NAME" -v "$PLUGIN_DATA_ROOT/data:/var/lib/mysql" -e "MYSQL_ROOT_PASSWORD=$ROOT_PW" -d --restart always --label dokku=service --label dokku.service=$PLUGIN_NAME "$PLUGIN_IMAGE:$PLUGIN_IMAGE_VERSION")
 		echo "$ID" > "$PLUGIN_DATA_ROOT/CONTAINER_ID"
 		echo "$ROOT_PW" > "$PLUGIN_DATA_ROOT/ROOT_PASSWORD"
+		chmod 600 "$PLUGIN_DATA_ROOT/CONTAINER_ID"
+		chmod 600 "$PLUGIN_DATA_ROOT/ROOT_PASSWORD"
 
 		dokku_log_info2 "Container was created"
 		;;
