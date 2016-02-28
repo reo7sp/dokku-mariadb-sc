@@ -7,7 +7,7 @@ mysql_sql_cache=()
 
 _docker_exec() {
 	IFS=" "
-	local COMMAND="$*"
+	local COMMAND="env TERM=xterm $*"
 	docker exec -it $CONTAINER_ID $COMMAND
 }
 
