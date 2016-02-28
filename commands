@@ -250,7 +250,7 @@ case "$1" in
 		chown dokku:dokku "$PLUGIN_DATA_ROOT"
 
 		ROOT_PW=$(generate_random_string 8)
-		ID=$(docker run --name "$PLUGIN_SERVICE" -v "$SERVICE_DATA_ROOT/data:/var/lib/mysql" -e "MYSQL_ROOT_PASSWORD=$ROOT_PW" -d --restart always --label dokku=service --label dokku.service=mariadb "$PLUGIN_IMAGE:$PLUGIN_IMAGE_VERSION")
+		ID=$(docker run --name "$PLUGIN_NAME" -v "$SERVICE_DATA_ROOT/data:/var/lib/mysql" -e "MYSQL_ROOT_PASSWORD=$ROOT_PW" -d --restart always --label dokku=service --label dokku.service=$PLUGIN_NAME "$PLUGIN_IMAGE:$PLUGIN_IMAGE_VERSION")
 		echo "$ID" > "$PLUGIN_DATA_ROOT/CONTAINER_ID"
 		echo "$ROOT_PW" > "$PLUGIN_DATA_ROOT/ROOT_PASSWORD"
 
