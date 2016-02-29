@@ -90,15 +90,9 @@ case "$1" in
 
 		echo "$APP" >> "$DBINFO_ROOT/LINKS"
 		dokku docker-options:add "$APP" build,deploy,run "--link $CONTAINER_ID:$PLUGIN_DATABASE_ALIAS"
-		dokku config:set "$APP" "DATABASE_URL=$DB_URL"
-		dokku config:set "$APP" "DB_HOST=$PLUGIN_DATABASE_ALIAS"
-		dokku config:set "$APP" "DB_PORT=$PLUGIN_DATABASE_PORT"
-		dokku config:set "$APP" "DB_USER=$DB_NAME"
-		dokku config:set "$APP" "DB_PASS=$PW"
+		dokku config:set $APP DATABASE_URL=$DB_URL DB_HOST=$PLUGIN_DATABASE_ALIAS DB_PORT=$PLUGIN_DATABASE_PORT DB_USER=$DB_NAME DB_PASS=$PW
 
 		dokku_log_info2 "$APP linked to $PLUGIN_SERVICE database: $NAME"
-
-		restart_app $APP
 		;;
 
 	$PLUGIN_COMMAND_PREFIX:unlink)
@@ -121,15 +115,9 @@ case "$1" in
 
 		sed -i "/^$APP\$/d" "$DBINFO_ROOT/LINKS"
 		dokku docker-options:remove "$APP" build,deploy,run "--link $CONTAINER_ID:$PLUGIN_DATABASE_ALIAS"
-		dokku config:unset "$APP" "DATABASE_URL"
-		dokku config:unset "$APP" "DB_HOST"
-		dokku config:unset "$APP" "DB_PORT"
-		dokku config:unset "$APP" "DB_USER"
-		dokku config:unset "$APP" "DB_PASS"
+		dokku config:unset $APP DATABASE_URL DB_HOST DB_PORT DB_USER DB_PASS
 
 		dokku_log_info2 "$APP unlinked from $PLUGIN_SERVICE database: $NAME"
-
-		restart_app $APP
 		;;
 
 	$PLUGIN_COMMAND_PREFIX:export)
