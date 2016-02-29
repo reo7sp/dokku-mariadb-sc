@@ -39,11 +39,11 @@ restart_apps() {
 }
 
 get_container_id() {
-	cat $PLUGIN_DATA_ROOT/CONTAINER_ID
+	cat $PLUGIN_DATA_ROOT/CONTAINER_ID 2> /dev/null || exit 1
 }
 
 get_admin_password() {
-	cat $PLUGIN_DATA_ROOT/ROOT_PASSWORD
+	cat $PLUGIN_DATA_ROOT/ROOT_PASSWORD 2> /dev/null || exit 1
 }
 
 generate_database_name() {

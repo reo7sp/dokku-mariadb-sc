@@ -8,21 +8,27 @@ mysql_sql_cache=()
 _docker_exec() {
 	IFS=" "
 	local COMMAND="env TERM=xterm $*"
+	docker exec -i $CONTAINER_ID $COMMAND
+}
+
+_docker_exec_with_tty() {
+	IFS=" "
+	local COMMAND="env TERM=xterm $*"
 	docker exec -it $CONTAINER_ID $COMMAND
 }
 
 _mysql_open() {
-	_docker_exec "$mysql_command"
+	_docker_exec_with_tty "$mysql_command"
 }
 
 _mysql_run() {
 	local COMMAND=$1
-	echo "$COMMAND" | _mysql_open
+	echo "$COMMAND" | _docker_exec "$mysql_command"
 }
 
 _mysql_setup() {
 	local USER=$1; local PW=$2; local DB=$3
-	mysql_command="mysql -u $USER --password=$PW $DB"
+	mysql_command="mysql -u$USER -p$PW $DB"
 }
 
 _mysql() {
@@ -41,14 +47,13 @@ case "$2" in
 		DB=$3; DB_PW=$4; ADMIN_PW=$5
 
 		_mysql_setup root $ADMIN_PW mysql
-		_mysql "CREATE USER '$DB'@'%' IDENTIFIED BY 'temporary_password';"
-		_mysql "SET PASSWORD FOR '$DB'@'%' = PASSWORD('$DB_PW');"
+		_mysql "CREATE USER '$DB'@'%' IDENTIFIED BY '$DB_PW';"
 		_mysql "CREATE DATABASE $DB;"
 		_mysql "GRANT ALL PRIVILEGES ON $DB.* To '$DB'@'%';"
 		_mysql_flush
 		;;
 
-	delete)
+	destroy)
 		DB=$3; ADMIN_PW=$4
 
 		_mysql_setup root $ADMIN_PW mysql
@@ -57,7 +62,7 @@ case "$2" in
 		_mysql_flush
 		;;
 
-	user_connect)
+	user-connect)
 		DB=$3; DB_PW=$4
 
 		_mysql_setup $DB $DB_PW $DB
@@ -65,7 +70,11 @@ case "$2" in
 		;;
 
 	connect)
-		DB=$3; ADMIN_PW=$3
+		if [[ -z $4 ]]; then
+			DB=mysql; ADMIN_PW=$3
+		else
+			DB=$3; ADMIN_PW=$4
+		fi
 
 		_mysql_setup root $ADMIN_PW $DB
 		_mysql_open
