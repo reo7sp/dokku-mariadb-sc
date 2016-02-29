@@ -26,15 +26,13 @@ restart_apps() {
 
 	local apps=()
 
-	for dir in $(ls $PLUGIN_DATA_ROOT); do
-		while read line; do
-			apps+=("$line")
-		done < "$PLUGIN_DATA_ROOT/$dir/LINKS"
+	for db in $(get_all_databases); do
+		apps+=(get_all_links $db)
 	done
 
 	apps=$(echo "${apps[@]}" | tr ' ' '\n' | sort -u | tr '\n' ' ')
-	for item in $apps; do
-		restart_app $item
+	for app in $apps; do
+		restart_app $app
 	done
 }
 
@@ -59,4 +57,23 @@ get_database_url() {
 	local DB=$1
 	local PW=$2
 	echo "$PLUGIN_SCHEME://$DB:$PW@$PLUGIN_DATABASE_ALIAS:$PLUGIN_DATABASE_PORT/$DB"
+}
+
+get_all_databases() {
+	local dbs=()
+	while read line; do
+		dbs+=("$line")
+	done < "$PLUGIN_DATA_ROOT/DATABASES"
+	echo "${dbs[@]}"
+}
+
+get_all_links() {
+	local DB=$1
+	local links=()
+
+	while read line; do
+		links+=("$line")
+	done < "$PLUGIN_DATA_ROOT/$DB/LINKS"
+
+	echo "${links[@]}"
 }

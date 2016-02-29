@@ -29,8 +29,10 @@ case "$1" in
 		chmod 600 "$DBINFO_ROOT/DB_NAME"
 		chmod 600 "$DBINFO_ROOT/PASSWORD"
 		chmod 600 "$DBINFO_ROOT/LINKS"
+
 		dokku_log_info1_quiet "Creating database $DB_NAME"
 		manage $CONTAINER_ID create $DB_NAME $PW $(get_admin_password)
+		echo "$NAME" >> "$PLUGIN_DATA_ROOT/DATABASES"
 
 		dokku_log_info2 "$PLUGIN_SERVICE database created: $NAME"
 		;;
@@ -58,14 +60,16 @@ case "$1" in
 			fi
 		fi
 
-		while read line; do
-			dokku $PLUGIN_COMMAND_PREFIX:unlink $NAME $app || true
-		done < "$DBINFO_ROOT/LINKS"
+		for link in $(get_all_links $NAME); do
+			dokku $PLUGIN_COMMAND_PREFIX:unlink $NAME $link || true
+		done
 
 		DB_NAME=$(cat "$DBINFO_ROOT/DB_NAME")
+
 		dokku_log_info1_quiet "Deleting database $DB_NAME"
 		manage $CONTAINER_ID destroy $DB_NAME $(get_admin_password)
 		rm -rf "$DBINFO_ROOT"
+		sed -i "/^$NAME\$/d" "$PLUGIN_DATA_ROOT/DATABASES"
 
 		dokku_log_info2 "$PLUGIN_SERVICE database deleted: $NAME"
 		;;
@@ -194,6 +198,7 @@ case "$1" in
 
 		dokku_log_info1_quiet "Starting container"
 		docker start $CONTAINER_ID
+
 		dokku_log_info2 "Container started"
 		;;
 
@@ -206,6 +211,7 @@ case "$1" in
 		dokku_log_info1_quiet "Stopping container"
 		manage $CONTAINER_ID shutdown $(get_admin_password)
 		docker stop $CONTAINER_ID
+
 		dokku_log_info2 "Container stopped"
 		;;
 
@@ -238,8 +244,16 @@ case "$1" in
 
 		echo "$CONTAINER_ID" > "$PLUGIN_DATA_ROOT/CONTAINER_ID"
 		echo "$ROOT_PW" > "$PLUGIN_DATA_ROOT/ROOT_PASSWORD"
+		touch "$PLUGIN_DATA_ROOT/DATABASES"
 		chmod 600 "$PLUGIN_DATA_ROOT/CONTAINER_ID"
 		chmod 600 "$PLUGIN_DATA_ROOT/ROOT_PASSWORD"
+		chmod 600 "$PLUGIN_DATA_ROOT/DATABASES"
+
+		for db in $(get_all_databases); do
+			for link in $(get_all_links $db); do
+				dokku docker-options:add "$link" build,deploy,run "--link $CONTAINER_ID:$PLUGIN_DATABASE_ALIAS"
+			done
+		done
 
 		dokku_log_info2 "Container was created and started. Wait for a minute to allow it initilize"
 		;;
@@ -249,9 +263,16 @@ case "$1" in
 
 		dokku $PLUGIN_COMMAND_PREFIX:stop || true
 
+		for db in $(get_all_databases); do
+			for link in $(get_all_links $db); do
+				dokku docker-options:remove "$link" build,deploy,run "--link $CONTAINER_ID:$PLUGIN_DATABASE_ALIAS"
+			done
+		done
+
 		dokku_log_info1_quiet "Deleting container"
 		docker rm -f $CONTAINER_ID
 		rm $PLUGIN_DATA_ROOT/CONTAINER_ID
+
 		dokku_log_info2 "Container was deleted. It's data is still kept in $SERVICE_DATA_ROOT/data"
 		;;
 
@@ -275,13 +296,21 @@ case "$1" in
 			fi
 		fi
 
+		for db in $(get_all_databases); do
+			for link in $(get_all_links $db); do
+				dokku $PLUGIN_COMMAND_PREFIX:unlink $db $link || true
+			done
+		done
+
 		dokku $PLUGIN_COMMAND_PREFIX:uninstall || true
+
 		dokku_log_info1_quiet "Deleting data"
 		if [[ -d "$PLUGIN_DATA_ROOT/data" ]]; then
 			docker run --rm -v "$PLUGIN_DATA_ROOT/data:/data" "$PLUGIN_IMAGE:$PLUGIN_IMAGE_VERSION" chmod 777 -R /data
 		fi
 		rm -rf "$PLUGIN_DATA_ROOT"
-		dokku_log_info2 "Data was deleted"
+
+		dokku_log_info2 "All $PLUGIN_SERVICE data was deleted"
 		;;
 
 	help | $PLUGIN_COMMAND_PREFIX:help)
